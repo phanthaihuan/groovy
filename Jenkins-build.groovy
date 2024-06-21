@@ -10,6 +10,7 @@ pipeline {
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
         GIT_CREDENTIAL = 'github-access'
         INSTALLER_DIR = 'terraform'
+        TF_VAR_SSH_PRIVATE_KEY = credentials('SSH_PRIVATE_KEY')
     }
 
     stages {
@@ -78,7 +79,10 @@ pipeline {
                         )
 
                         if (userInput.trim() == 'YES') {
-                            sh 'terraform apply -auto-approve'
+                            sh """
+                                terraform apply -auto-approve \
+                                -var 'SSH_PRIVATE_KEY=${TF_VAR_SSH_PRIVATE_KEY}'
+                            """
                         } else {
                             currentBuild.result = 'ABORTED'
                             return
