@@ -40,7 +40,7 @@ pipeline {
                 dir(INSTALLER_DIR) {
                     sh 'pwd'
                     sh 'ls -lrth'
-                    sh 'terraform init'
+                    sh 'terraform init -no-color'
                 }
             }
         }
@@ -48,7 +48,7 @@ pipeline {
         stage('Validate configuration files') {
             steps {
                 dir(INSTALLER_DIR) {
-                    sh 'terraform validate'
+                    sh 'terraform validate -no-color'
                     sh 'if [ $? -ne 0 ]; then exit 1; fi'
                 }
             }
@@ -57,7 +57,7 @@ pipeline {
         stage('Plan to destroy Resources') {
             steps {
                 dir(INSTALLER_DIR) {
-                    sh 'terraform plan -destroy'
+                    sh 'terraform plan -destroy -no-color'
                 }
             }
         }
@@ -80,7 +80,7 @@ pipeline {
 
                         if (userInput.trim() == 'YES') {
                             sh """
-                                terraform destroy -auto-approve \
+                                terraform destroy -auto-approve -no-color \
                                 -var 'SSH_PRIVATE_KEY=${TF_VAR_SSH_PRIVATE_KEY}'
                             """
                         } else {
