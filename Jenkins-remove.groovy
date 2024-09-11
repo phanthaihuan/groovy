@@ -70,27 +70,10 @@ pipeline {
             steps {
                 script {
                     dir(INSTALLER_DIR) {
-                        def userInput = input(
-                            id: 'userInput',
-                            message: 'Do you want to proceed for production deployment?',
-                            parameters: [
-                                string(
-                                    name: 'INPUT_VALUE',
-                                    defaultValue: '',
-                                    description: 'Please enter YES or NO'
-                                )
-                            ]
-                        )
-
-                        if (userInput.trim() == 'YES') {
-                            sh """
-                                terraform destroy -auto-approve \
-                                -var 'SSH_PRIVATE_KEY=${TF_VAR_SSH_PRIVATE_KEY}'
-                            """
-                        } else {
-                            currentBuild.result = 'ABORTED'
-                            return
-                        }
+                        sh """
+                            terraform destroy -auto-approve \
+                            -var 'SSH_PRIVATE_KEY=${TF_VAR_SSH_PRIVATE_KEY}'
+                        """
                     }
                 }
             }
