@@ -15,6 +15,7 @@ pipeline {
         GIT_CREDENTIAL = 'github-access'
         INSTALLER_DIR = 'terraform'
         TF_VAR_SSH_PRIVATE_KEY = credentials('SSH_PRIVATE_KEY')
+        TF_IN_AUTOMATION = 'true'        
     }
 
     stages {
@@ -42,8 +43,6 @@ pipeline {
         stage('Init Provider') {
             steps {
                 dir(INSTALLER_DIR) {
-                    sh 'pwd'
-                    sh 'ls -lrth'
                     sh 'terraform init'
                 }
             }
@@ -70,30 +69,41 @@ pipeline {
             steps {
                 script {
                     dir(INSTALLER_DIR) {
-                        def userInput = input(
-                            id: 'userInput',
-                            message: 'Do you want to proceed for production deployment?',
-                            parameters: [
-                                string(
-                                    name: 'INPUT_VALUE',
-                                    defaultValue: '',
-                                    description: 'Please enter YES or NO'
-                                )
-                            ]
-                        )
-
-                        if (userInput.trim() == 'YES') {
-                            sh """
-                                terraform apply -auto-approve \
-                                -var 'SSH_PRIVATE_KEY=${TF_VAR_SSH_PRIVATE_KEY}'
-                            """
-                        } else {
-                            currentBuild.result = 'ABORTED'
-                            return
-                        }
+                        sh """
+                            terraform apply -auto-approve \
+                            -var 'SSH_PRIVATE_KEY=${TF_VAR_SSH_PRIVATE_KEY}'
+                        """
                     }
                 }
             }
         }
+        
+        stage(' Wait for EC2 to be ready') {
+            steps {
+                dir(INSTALLER_DIR) {
+                    sh '''
+                        echo $(terraform output -json ec2_public_ip) | awk -F'"' '{print $2}' > ansible/ansible_inventory
+                        cat ansible/ansible_inventory
+                        aws ec2 wait instance-status-ok --region ap-southeast-1 --instance-ids `$(terraform output -json ec2_instance_id) | awk -F'"' '{print $2}'`
+                    '''
+                }
+            }
+        }
+        
+        stage('Run Ansible') {
+            environment {
+                ANSIBLE_HOST_KEY_CHECKING = 'False'
+                ANSIBLE_CONFIG = 'ansible/ansible.cfg'
+            }
+            steps {
+                dir(INSTALLER_DIR) {
+                    ansiblePlaybook(
+                    inventory: 'ansible/ansible_inventory',
+                    playbook: 'ansible/playbook.yaml',
+                    credentialsId: 'SSH_PRIVATE_KEY',
+                    extras: '-v')
+                }
+            }
+        }        
     }
 }
