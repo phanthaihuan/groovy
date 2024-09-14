@@ -6,7 +6,7 @@ pipeline {
     }
 
     parameters {
-        string(name: 'MILU2_INFRA_GIT_BRANCH', defaultValue: 'main', description: 'Git branch storing Terraform.')
+        string(name: 'INFRA_GIT_BRANCH', defaultValue: 'main', description: 'Git branch storing Terraform.')
     }
 
     environment {
@@ -24,7 +24,7 @@ pipeline {
                 dir(INSTALLER_DIR) {
                     checkout([
                         $class: 'GitSCM',
-                        branches: [[name: MILU2_INFRA_GIT_BRANCH]],
+                        branches: [[name: INFRA_GIT_BRANCH]],
                         doGenerateSubmoduleConfigurations: false,
                         extensions: [[$class: 'CleanBeforeCheckout']],
                         submoduleCfg: [],
@@ -71,8 +71,7 @@ pipeline {
                 script {
                     dir(INSTALLER_DIR) {
                         sh """
-                            terraform destroy -auto-approve \
-                            -var 'SSH_PRIVATE_KEY=${TF_VAR_SSH_PRIVATE_KEY}'
+                            terraform destroy -auto-approve
                         """
                     }
                 }
